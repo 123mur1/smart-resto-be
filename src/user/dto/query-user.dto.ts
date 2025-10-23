@@ -21,6 +21,7 @@ export class QueryUserDto {
   @IsString()
   fullName?: string;
 
+
   @ApiPropertyOptional({ description: "Phone number", example: "+1234567890" })
   @IsOptional()
   @IsString()
