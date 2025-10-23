@@ -1,0 +1,71 @@
+# ---------------------------------------------------------
+# ✅ GitHub Branch Protection Ruleset
+# Project: Smart Campus Restaurant Management System
+# Purpose: Protect the main branch (production)
+# ---------------------------------------------------------
+
+name: Protect main branch
+enforcement: active
+
+# Who this ruleset applies to
+conditions:
+  ref_name:
+    include:
+      - main  # Protect the main branch
+    exclude: [] # Add dev/test branches if needed later
+
+# List of users/teams/apps that can bypass the rules
+bypass_actors: []  # You can add teams like: - team: admins
+
+# Rules to protect main branch
+rules:
+
+  # Prevent branch deletion and force pushes
+  restrict_pushes:
+    branches: true
+    force_pushes: true
+    deletions: true
+
+  # Require pull requests for merging
+  pull_request:
+    required: true
+    required_approving_review_count: 0  # Minimum reviewers required
+    dismiss_stale_reviews_on_push: true
+    require_code_owner_review: true
+    require_last_push_approval: true
+    require_conversation_resolution: true
+
+  # Require linear history (no merge commits)
+  require_linear_history: true
+
+  # Require signed commits (recommended for production)
+  require_signed_commits: true
+
+  # Restrict direct creation of protected branches
+  restrict_creations: true
+
+  # Require status checks before merging
+  require_status_checks:
+    strict: true # branch must be up-to-date with main
+    checks:
+      - build (Node.js)
+      - lint
+
+  # Require code scanning results (optional, enable if using CodeQL)
+  require_code_scanning_results:
+    tools:
+      - CodeQL
+
+# Merge methods allowed
+allowed_merge_methods:
+  squash: true
+  rebase: true
+  merge_commit: false
+
+# Notes / description
+description: |
+  This ruleset enforces strong protection on the `main` branch.
+  - Prevents force pushes and deletions
+  - Requires PR reviews and status checks
+  - Enforces clean commit history (no merge commits)
+  - Supports secure CI/CD integration with GitHub Actions
