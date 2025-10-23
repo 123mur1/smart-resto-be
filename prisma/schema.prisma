@@ -16,11 +16,11 @@ model User {
   first_name String?  @db.VarChar(100)
   last_name  String?  @db.VarChar(100)
   email      String   @unique @db.VarChar(150)
-  phone      String?  @db.VarChar(20)
+  phone      String?  @unique @db.VarChar(20)
   password   String   @db.VarChar(255)
   role       Role     @default(STUDENTS)
   created_at DateTime @default(now())
-  updated_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   // Relations
   student Student?
