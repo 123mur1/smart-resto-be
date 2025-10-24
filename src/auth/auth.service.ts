@@ -11,6 +11,7 @@ import { InfrastructureService } from "src/share/infrastructure/infrastructure.s
 
 import { LoginAuthDto } from "./dto/login-auth.dto";
 import { RegisterAuthDto } from "./dto/register-auth.dto";
+import { ResetPasswordDto } from "./dto/rese-password.dto";
 import { VerifyEmailDto } from "./dto/verify-email.dto";
 
 @Injectable()
@@ -186,6 +187,35 @@ export class AuthService {
 
     await this.InfrastructureService.sendOtp(
       email,
+      "Use this OTP to reset your password."
+    );
+
+    return {
+      status: true,
+      message: "OTP sent successfully",
+    };
+  }
+
+  async resetPassword(resetPasswordDto: ResetPasswordDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: resetPasswordDto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    if (!user.isverified) {
+      throw new UnauthorizedException("Email not verified");
+    }
+    const hashedPassword = await bcrypt.hash(resetPasswordDto.password, 10);
+    await this.prisma.user.update({
+      where: { email: resetPasswordDto.email },
+      data: { password: hashedPassword },
+    });
+
+    await this.InfrastructureService.sendOtp(
+      resetPasswordDto.email,
       "Use this OTP to reset your password."
     );
 

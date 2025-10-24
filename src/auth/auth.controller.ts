@@ -4,6 +4,7 @@ import { ApiBody, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { AuthService } from "./auth.service";
 import { LoginAuthDto } from "./dto/login-auth.dto";
 import { RegisterAuthDto } from "./dto/register-auth.dto";
+import { ResetPasswordDto } from "./dto/rese-password.dto";
 import { ResendOtpDto } from "./dto/resend-otp";
 import { VerifyEmailDto } from "./dto/verify-email.dto";
 
@@ -55,5 +56,14 @@ export class AuthController {
   @ApiResponse({ status: 404, description: "User not found." })
   forgetPassword(@Body() forgetPasswordDto: ResendOtpDto) {
     return this.authService.forgetPassword(forgetPasswordDto.email);
+  }
+
+  @Post("reset-password")
+  @ApiOperation({ summary: "Reset user password" })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiResponse({ status: 200, description: "Password reset successfully." })
+  @ApiResponse({ status: 404, description: "User not found." })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 }
