@@ -5,10 +5,15 @@ import {
 } from "@nestjs/common";
 
 import { PrismaService } from "../../prisma/prisma.service";
+import { MailService } from "../email/email.service";
+import { otpTemplate } from "../email/emailTemp/otpTemplate";
 
 @Injectable()
 export class InfrastructureService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly emailService: MailService
+  ) {}
 
   async checkRecordExists(model: keyof PrismaService, id: string) {
     const record = await (this.prisma[model] as any).findUnique({
@@ -62,5 +67,37 @@ export class InfrastructureService {
         },
       },
     };
+  }
+  async sendOtp(email: string, htmlContent?: string) {
+    // Generate a 6-digit OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    // Set expiration time (e.g., 10 minutes from now)
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    // Store OTP in the database
+    await this.prisma.otp.create({
+      data: {
+        code: otpCode,
+        expires_at: expiresAt,
+        user: {
+          connect: { email },
+        },
+      },
+    });
+
+    // Send OTP via email
+    const subject = "Your OTP Code";
+    const html = otpTemplate(otpCode);
+
+    await this.emailService.sendMail(email, subject, html);
   }
 }
