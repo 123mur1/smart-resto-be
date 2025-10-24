@@ -11,6 +11,7 @@ import { InfrastructureService } from "src/share/infrastructure/infrastructure.s
 
 import { LoginAuthDto } from "./dto/login-auth.dto";
 import { RegisterAuthDto } from "./dto/register-auth.dto";
+import { VerifyEmailDto } from "./dto/verify-email.dto";
 
 @Injectable()
 export class AuthService {
@@ -32,6 +33,8 @@ export class AuthService {
         password: hashedPassword,
       },
     });
+
+    await this.InfrastructureService.sendOtp(user.email);
     return {
       status: true,
       message: "User created successfully",
@@ -52,6 +55,10 @@ export class AuthService {
     });
     if (!user) {
       throw new NotFoundException("User not found");
+    }
+
+    if (!user.isverified) {
+      throw new UnauthorizedException("Email not verified");
     }
 
     if (!user.password) {
@@ -84,6 +91,94 @@ export class AuthService {
         phone: user.phone,
         role: user.role,
       },
+    };
+  }
+
+  async veryfyEmail(verifyEmailDto: VerifyEmailDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { email: verifyEmailDto.email },
+    });
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    if (user.isverified) {
+      return {
+        status: true,
+        message: "Email is already verified",
+      };
+    }
+
+    const otpRecord = await this.prisma.otp.findFirst({
+      where: {
+        user_id: user.user_id,
+        code: verifyEmailDto.otp,
+        expires_at: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException("Invalid or expired OTP");
+    }
+
+    await this.prisma.user.update({
+      where: { email: verifyEmailDto.email },
+      data: { isverified: true },
+    });
+
+    await this.prisma.otp.delete({
+      where: { user_id: user.user_id },
+    });
+
+    return {
+      status: true,
+      message: "Email verified successfully",
+    };
+  }
+
+  async resendOtp(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    if (user.isverified) {
+      return {
+        status: true,
+        message: "Email is already verified",
+      };
+    }
+
+    await this.InfrastructureService.sendOtp(email);
+
+    return {
+      status: true,
+      message: "OTP resent successfully",
+    };
+  }
+
+  async forgetPassword(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
+
+    await this.InfrastructureService.sendOtp(email);
+
+    return {
+      status: true,
+      message: "OTP sent successfully",
     };
   }
 }
