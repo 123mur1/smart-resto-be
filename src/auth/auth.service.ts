@@ -214,14 +214,9 @@ export class AuthService {
       data: { password: hashedPassword },
     });
 
-    await this.InfrastructureService.sendOtp(
-      resetPasswordDto.email,
-      "Use this OTP to reset your password."
-    );
-
     return {
       status: true,
-      message: "OTP sent successfully",
+      message: "Password reset successfully",
     };
   }
 }
