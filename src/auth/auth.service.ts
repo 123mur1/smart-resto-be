@@ -34,7 +34,10 @@ export class AuthService {
       },
     });
 
-    await this.InfrastructureService.sendOtp(user.email);
+    await this.InfrastructureService.sendOtp(
+      user.email,
+      "Use this OTP to verify your email."
+    );
     return {
       status: true,
       message: "User created successfully",
@@ -157,7 +160,10 @@ export class AuthService {
       };
     }
 
-    await this.InfrastructureService.sendOtp(email);
+    await this.InfrastructureService.sendOtp(
+      email,
+      "Use this OTP to verify your email."
+    );
 
     return {
       status: true,
@@ -174,7 +180,14 @@ export class AuthService {
       throw new NotFoundException("User not found");
     }
 
-    await this.InfrastructureService.sendOtp(email);
+    if (!user.isverified) {
+      throw new UnauthorizedException("Email not verified");
+    }
+
+    await this.InfrastructureService.sendOtp(
+      email,
+      "Use this OTP to reset your password."
+    );
 
     return {
       status: true,
