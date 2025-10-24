@@ -1,4 +1,4 @@
-export const otpTemplate = (otpCode: string) => `
+export const otpTemplate = (otpCode: string, message?: string) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -50,12 +50,19 @@ export const otpTemplate = (otpCode: string) => `
       font-size: 12px;
       color: #888888;
     }
+    .custom-message {
+      color: #1f2937;
+      font-size: 15px;
+      margin-top: 10px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🔐 Your Verification Code</h1>
-    <p>Use the following One-Time Password (OTP) to verify your account:</p>
+
+    ${message ? `<p class="custom-message">${message}</p>` : ""}
     <div class="otp-box">${otpCode}</div>
     <p>This code will expire in <strong>30 minutes</strong>. Please do not share it with anyone for security reasons.</p>
     <div class="footer">

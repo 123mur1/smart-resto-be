@@ -68,7 +68,7 @@ export class InfrastructureService {
       },
     };
   }
-  async sendOtp(email: string, htmlContent?: string) {
+  async sendOtp(email: string, message?: string) {
     // Generate a 6-digit OTP code
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -96,7 +96,7 @@ export class InfrastructureService {
 
     // Send OTP via email
     const subject = "Your OTP Code";
-    const html = otpTemplate(otpCode);
+    const html = otpTemplate(otpCode, message);
 
     await this.emailService.sendMail(email, subject, html);
   }
