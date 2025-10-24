@@ -37,7 +37,7 @@ export class AuthController {
   @ApiResponse({ status: 404, description: "User not found." })
   @ApiResponse({ status: 401, description: "Invalid or expired OTP." })
   verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
-    return this.authService.veryfyEmail(verifyEmailDto);
+    return this.authService.verifyEmail(verifyEmailDto);
   }
 
   @Post("resend-otp")

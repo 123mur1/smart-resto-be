@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from "@nestjs/common";
 
@@ -16,29 +17,37 @@ export class InfrastructureService {
   ) {}
 
   async checkRecordExists(model: keyof PrismaService, id: string) {
-    const record = await (this.prisma[model] as any).findUnique({
-      where: { id },
-    });
-    if (!record) {
-      throw new NotFoundException(`${String(model)} with id ${id} not found`);
-    }
+    try {
+      const record = await (this.prisma[model] as any).findUnique({
+        where: { id },
+      });
+      if (!record) {
+        throw new NotFoundException(`${String(model)} with id ${id} not found`);
+      }
 
-    return record;
+      return record;
+    } catch (error) {
+      throw new InternalServerErrorException("Error checking record existence");
+    }
   }
 
   async checkDuplicate(
     model: keyof PrismaService,
     fields: { property: string; value: any }[]
   ) {
-    for (const field of fields) {
-      const record = await (this.prisma[model] as any).findFirst({
-        where: { [field.property]: field.value },
-      });
-      if (record) {
-        throw new ConflictException(
-          `${String(model)} with ${field.property} '${field.value}' already exists`
-        );
+    try {
+      for (const field of fields) {
+        const record = await (this.prisma[model] as any).findFirst({
+          where: { [field.property]: field.value },
+        });
+        if (record) {
+          throw new ConflictException(
+            `${String(model)} with ${field.property} '${field.value}' already exists`
+          );
+        }
       }
+    } catch (error) {
+      throw new InternalServerErrorException("Error checking duplicates");
     }
   }
 
@@ -69,35 +78,39 @@ export class InfrastructureService {
     };
   }
   async sendOtp(email: string, message?: string) {
-    // Generate a 6-digit OTP code
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    try {
+      // Generate a 6-digit OTP code
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
 
-    if (!user) {
-      throw new NotFoundException("User not found");
-    }
+      if (!user) {
+        throw new NotFoundException("User not found");
+      }
 
-    // Set expiration time (e.g., 10 minutes from now)
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+      // Set expiration time (e.g., 10 minutes from now)
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-    // Store OTP in the database
-    await this.prisma.otp.create({
-      data: {
-        code: otpCode,
-        expires_at: expiresAt,
-        user: {
-          connect: { email },
+      // Store OTP in the database
+      await this.prisma.otp.create({
+        data: {
+          code: otpCode,
+          expires_at: expiresAt,
+          user: {
+            connect: { email },
+          },
         },
-      },
-    });
+      });
 
-    // Send OTP via email
-    const subject = "Your OTP Code";
-    const html = otpTemplate(otpCode, message);
+      // Send OTP via email
+      const subject = "Your OTP Code";
+      const html = otpTemplate(otpCode, message);
 
-    await this.emailService.sendMail(email, subject, html);
+      await this.emailService.sendMail(email, subject, html);
+    } catch (error) {
+      throw new InternalServerErrorException("Error sending OTP email");
+    }
   }
 }
