@@ -3,7 +3,7 @@ import { IsString } from "class-validator";
 
 export class ResendOtpDto {
   @ApiProperty({
-    example: "john@example.com",
+    example: "ruyangam15@gmail.com",
     description: "Email of the user",
   })
   @IsString()

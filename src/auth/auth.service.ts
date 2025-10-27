@@ -23,171 +23,162 @@ export class AuthService {
     private readonly InfrastructureService: InfrastructureService
   ) {}
   async register(registerAuthDto: RegisterAuthDto) {
-    try {
-      await this.InfrastructureService.checkDuplicate("user", [
-        { property: "phone", value: registerAuthDto.phone },
-        { property: "email", value: registerAuthDto.email },
-      ]);
+    await this.InfrastructureService.checkDuplicate("user", [
+      { property: "phone", value: registerAuthDto.phone },
+      { property: "email", value: registerAuthDto.email },
+    ]);
 
-      const hashedPassword = await bcrypt.hash(registerAuthDto.password, 10);
-      const user = await this.prisma.user.create({
-        data: {
-          ...registerAuthDto,
-          password: hashedPassword,
-        },
-      });
+    const hashedPassword = await bcrypt.hash(registerAuthDto.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        ...registerAuthDto,
+        password: hashedPassword,
+      },
+    });
 
-      await this.InfrastructureService.sendOtp(
-        user.email,
-        "Use this OTP to verify your email."
-      );
+    const token = await this.jwtService.signAsync({
+      email: user.email,
+      sub: user.user_id,
+      role: user.role,
+    });
 
-      return {
-        status: true,
-        message: "User created successfully",
-        user: {
-          id: user.user_id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-        },
-      };
-    } catch (error) {
-      throw new InternalServerErrorException("Error during registration");
-    }
+    await this.InfrastructureService.sendOtp(
+      user.email,
+      "Use this OTP to verify your email."
+    );
+
+    return {
+      status: true,
+      message: "User created successfully",
+      token,
+      user: {
+        id: user.user_id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    };
   }
 
   async login(loginAuthDto: LoginAuthDto) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { email: loginAuthDto.email },
-      });
-      if (!user) {
-        throw new NotFoundException("User not found");
-      }
-
-      if (!user.isverified) {
-        throw new UnauthorizedException("Email not verified");
-      }
-
-      if (!user.password) {
-        throw new UnauthorizedException("Email or password is incorrect");
-      }
-      const isPasswordValid = await bcrypt.compare(
-        loginAuthDto.password,
-        user.password
-      );
-      if (!isPasswordValid) {
-        throw new UnauthorizedException("Email or password is incorrect");
-      }
-
-      const payload = {
-        sub: user.user_id,
-        email: user.email,
-        role: user.role,
-      };
-      const accessToken = await this.jwtService.signAsync(payload);
-
-      return {
-        status: true,
-        message: "Login successful",
-        accessToken,
-        user: {
-          id: user.user_id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-        },
-      };
-    } catch (error) {
-      throw new InternalServerErrorException("Error during login");
+    const user = await this.prisma.user.findUnique({
+      where: { email: loginAuthDto.email },
+    });
+    if (!user) {
+      throw new NotFoundException("User not found");
     }
+
+    if (!user.isverified) {
+      throw new UnauthorizedException("Email not verified");
+    }
+
+    if (!user.password) {
+      throw new UnauthorizedException("Email or password is incorrect");
+    }
+    const isPasswordValid = await bcrypt.compare(
+      loginAuthDto.password,
+      user.password
+    );
+    if (!isPasswordValid) {
+      throw new UnauthorizedException("Email or password is incorrect");
+    }
+
+    const payload = {
+      sub: user.user_id,
+      email: user.email,
+      role: user.role,
+    };
+    const accessToken = await this.jwtService.signAsync(payload);
+
+    return {
+      status: true,
+      message: "Login successful",
+      accessToken,
+      user: {
+        id: user.user_id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+      },
+    };
   }
 
   async verifyEmail(verifyEmailDto: VerifyEmailDto) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { email: verifyEmailDto.email },
-      });
-      if (!user) {
-        throw new NotFoundException("User not found");
-      }
+    const user = await this.prisma.user.findUnique({
+      where: { email: verifyEmailDto.email },
+    });
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
 
-      if (user.isverified) {
-        return {
-          status: true,
-          message: "Email is already verified",
-        };
-      }
-
-      const otpRecord = await this.prisma.otp.findFirst({
-        where: {
-          user_id: user.user_id,
-          code: verifyEmailDto.otp,
-          expires_at: {
-            gt: new Date(),
-          },
-        },
-        orderBy: {
-          created_at: "desc",
-        },
-      });
-
-      if (!otpRecord) {
-        throw new UnauthorizedException("Invalid or expired OTP");
-      }
-
-      await this.prisma.user.update({
-        where: { email: verifyEmailDto.email },
-        data: { isverified: true },
-      });
-
-      await this.prisma.otp.delete({
-        where: { user_id: user.user_id },
-      });
-
+    if (user.isverified) {
       return {
         status: true,
-        message: "Email verified successfully",
+        message: "Email is already verified",
       };
-    } catch (error) {
-      throw new InternalServerErrorException("Error verifying email");
     }
+
+    const otpRecord = await this.prisma.otp.findFirst({
+      where: {
+        user_id: user.user_id,
+        code: verifyEmailDto.otp,
+        expires_at: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        created_at: "desc",
+      },
+    });
+
+    if (!otpRecord) {
+      throw new UnauthorizedException("Invalid or expired OTP");
+    }
+
+    await this.prisma.user.update({
+      where: { email: verifyEmailDto.email },
+      data: { isverified: true },
+    });
+
+    await this.prisma.otp.delete({
+      where: { user_id: user.user_id },
+    });
+
+    return {
+      status: true,
+      message: "Email verified successfully",
+    };
   }
 
   async resendOtp(email: string) {
-    try {
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-      });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
 
-      if (!user) {
-        throw new NotFoundException("User not found");
-      }
+    if (!user) {
+      throw new NotFoundException("User not found");
+    }
 
-      if (user.isverified) {
-        return {
-          status: true,
-          message: "Email is already verified",
-        };
-      }
-
-      await this.InfrastructureService.sendOtp(
-        email,
-        "Use this OTP to verify your email."
-      );
-
+    if (user.isverified) {
       return {
         status: true,
-        message: "OTP resent successfully",
+        message: "Email is already verified",
       };
-    } catch (error) {
-      throw new InternalServerErrorException("Error resending OTP");
     }
+
+    await this.InfrastructureService.resendOtp(
+      email,
+      "Use this OTP to verify your email."
+    );
+
+    return {
+      status: true,
+      message: "OTP resent successfully",
+    };
   }
 
   async forgetPassword(email: string) {
@@ -235,6 +226,7 @@ export class AuthService {
       }
 
       const hashedPassword = await bcrypt.hash(resetPasswordDto.password, 10);
+
       await this.prisma.user.update({
         where: { email: resetPasswordDto.email },
         data: { password: hashedPassword },
@@ -245,6 +237,7 @@ export class AuthService {
         message: "Password reset successfully",
       };
     } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException("Error resetting password");
     }
   }

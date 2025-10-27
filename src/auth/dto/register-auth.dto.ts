@@ -17,14 +17,14 @@ export class RegisterAuthDto {
   last_name!: string;
 
   @ApiProperty({
-    example: "john@example.com",
+    example: "ruyangam15@gmail.com",
     description: "Email address of the user",
   })
   @IsEmail()
   email!: string;
 
   @ApiProperty({
-    example: "+1234567890",
+    example: "+250780905910",
     description: "Phone number of the user",
   })
   @IsString()

@@ -14,34 +14,30 @@ export class UserService {
     private readonly infrastructureService: InfrastructureService
   ) {}
   async create(createUserDto: CreateUserDto) {
-    try {
-      await this.infrastructureService.checkDuplicate("user", [
-        { property: "email", value: createUserDto.email },
-        { property: "phone", value: createUserDto.phone },
-      ]);
-      const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-      const user = await this.prisma.user.create({
-        data: {
-          ...createUserDto,
-          password: hashedPassword,
-        },
-      });
-      return {
-        status: true,
-        message: "User created successfully",
-        user: {
-          id: user.user_id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          email: user.email,
-          phone: user.phone,
-          role: user.role,
-          created_at: user.created_at,
-        },
-      };
-    } catch (error) {
-      throw new ConflictException("Error creating user");
-    }
+    await this.infrastructureService.checkDuplicate("user", [
+      { property: "email", value: createUserDto.email },
+      { property: "phone", value: createUserDto.phone },
+    ]);
+    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const user = await this.prisma.user.create({
+      data: {
+        ...createUserDto,
+        password: hashedPassword,
+      },
+    });
+    return {
+      status: true,
+      message: "User created successfully",
+      user: {
+        id: user.user_id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        email: user.email,
+        phone: user.phone,
+        role: user.role,
+        created_at: user.created_at,
+      },
+    };
   }
 
   async findAll(query?: QueryUserDto) {
