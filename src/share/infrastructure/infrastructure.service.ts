@@ -11,43 +11,36 @@ import { otpTemplate } from "../email/emailTemp/otpTemplate";
 
 @Injectable()
 export class InfrastructureService {
+  [x: string]: any;
   constructor(
     private prisma: PrismaService,
     private readonly emailService: MailService
   ) {}
 
   async checkRecordExists(model: keyof PrismaService, id: string) {
-    try {
-      const record = await (this.prisma[model] as any).findUnique({
-        where: { id },
-      });
-      if (!record) {
-        throw new NotFoundException(`${String(model)} with id ${id} not found`);
-      }
-
-      return record;
-    } catch (error) {
-      throw new InternalServerErrorException("Error checking record existence");
+    const record = await (this.prisma[model] as any).findUnique({
+      where: { id },
+    });
+    if (!record) {
+      throw new NotFoundException(`${String(model)} with id ${id} not found`);
     }
+
+    return record;
   }
 
   async checkDuplicate(
     model: keyof PrismaService,
     fields: { property: string; value: any }[]
   ) {
-    try {
-      for (const field of fields) {
-        const record = await (this.prisma[model] as any).findFirst({
-          where: { [field.property]: field.value },
-        });
-        if (record) {
-          throw new ConflictException(
-            `${String(model)} with ${field.property} '${field.value}' already exists`
-          );
-        }
+    for (const field of fields) {
+      const record = await (this.prisma[model] as any).findFirst({
+        where: { [field.property]: field.value },
+      });
+      if (record) {
+        throw new ConflictException(
+          `${String(model)} with ${field.property} '${field.value}' already exists`
+        );
       }
-    } catch (error) {
-      throw new InternalServerErrorException("Error checking duplicates");
     }
   }
 
@@ -98,9 +91,7 @@ export class InfrastructureService {
         data: {
           code: otpCode,
           expires_at: expiresAt,
-          user: {
-            connect: { email },
-          },
+          user_id: user.user_id,
         },
       });
 
@@ -110,6 +101,43 @@ export class InfrastructureService {
 
       await this.emailService.sendMail(email, subject, html);
     } catch (error) {
+      console.log(error);
+      throw new InternalServerErrorException("Error sending OTP email");
+    }
+  }
+
+  async resendOtp(email: string, message?: string) {
+    try {
+      // Generate a 6-digit OTP code
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+      const user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+
+      if (!user) {
+        throw new NotFoundException("User not found");
+      }
+
+      // Set expiration time (e.g., 10 minutes from now)
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+      // Store OTP in the database
+      await this.prisma.otp.update({
+        where: { user_id: user.user_id },
+        data: {
+          code: otpCode,
+          expires_at: expiresAt,
+        },
+      });
+
+      // Send OTP via email
+      const subject = "Your OTP Code";
+      const html = otpTemplate(otpCode, message);
+
+      await this.emailService.sendMail(email, subject, html);
+    } catch (error) {
+      console.log(error);
       throw new InternalServerErrorException("Error sending OTP email");
     }
   }
