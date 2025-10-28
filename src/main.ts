@@ -31,12 +31,12 @@ async function bootstrap() {
     })
   );
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3003);
   console.log(
-    `🚀 Application is running on: http://localhost:${process.env.PORT ?? 3000}`
+    `🚀 Application is running on: http://localhost:${process.env.PORT ?? 3003}`
   );
   console.log(
-    `📘 Swagger docs available at: http://localhost:${process.env.PORT ?? 3000}/api/docs`
+    `📘 Swagger docs available at: http://localhost:${process.env.PORT ?? 3003}/api/docs`
   );
 }
 

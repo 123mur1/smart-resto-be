@@ -29,7 +29,7 @@ export class UserService {
       status: true,
       message: "User created successfully",
       user: {
-        id: user.user_id,
+        id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
@@ -75,7 +75,7 @@ export class UserService {
       const users = await this.prisma.user.findMany({
         where: Object.keys(where).length ? where : undefined,
         select: {
-          user_id: true,
+          id: true,
           first_name: true,
           last_name: true,
           email: true,
@@ -104,10 +104,11 @@ export class UserService {
 
   async findOne(id: string) {
     try {
+      await this.infrastructureService.checkRecordExists("user", id);
       const user = await this.prisma.user.findUnique({
-        where: { user_id: id },
+        where: { id: id },
         select: {
-          user_id: true,
+          id: true,
           first_name: true,
           last_name: true,
           email: true,
@@ -128,6 +129,7 @@ export class UserService {
 
   async update(id: string, updateUserDto: UpdateUserDto) {
     try {
+      await this.infrastructureService.checkRecordExists("user", id);
       if (updateUserDto.password) {
         if (updateUserDto.password.length < 60) {
           const hashedPassword = await bcrypt.hash(updateUserDto.password, 10);
@@ -135,10 +137,10 @@ export class UserService {
         }
       }
       const user = await this.prisma.user.update({
-        where: { user_id: id },
+        where: { id: id },
         data: updateUserDto,
         select: {
-          user_id: true,
+          id: true,
           first_name: true,
           last_name: true,
           email: true,
@@ -159,8 +161,9 @@ export class UserService {
 
   async remove(id: string) {
     try {
+      await this.infrastructureService.checkRecordExists("user", id);
       const user = await this.prisma.user.delete({
-        where: { user_id: id },
+        where: { id: id },
       });
       return {
         status: true,
