@@ -36,12 +36,6 @@ export class AuthService {
       },
     });
 
-    const token = await this.jwtService.signAsync({
-      email: user.email,
-      sub: user.id,
-      role: user.role,
-    });
-
     await this.InfrastructureService.sendOtp(
       user.email,
       "Use this OTP to verify your email."
@@ -49,16 +43,8 @@ export class AuthService {
 
     return {
       status: true,
-      message: "User created successfully",
-      token,
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-      },
+      message:
+        "Verification OTP sent to your email, please verify your email account",
     };
   }
 
@@ -98,8 +84,7 @@ export class AuthService {
       accessToken,
       user: {
         id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        fullName: user.fullName,
         email: user.email,
         phone: user.phone,
         role: user.role,

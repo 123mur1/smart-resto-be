@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from "@nestjs/common";
 import {
@@ -18,6 +19,7 @@ import {
   ApiTags,
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "src/auth/jwt-auth.guard";
+import { InfrastructureService } from "src/share/infrastructure/infrastructure.service";
 
 import { CreateUserDto } from "./dto/create-user.dto";
 import { QueryUserDto } from "./dto/query-user.dto";
@@ -29,17 +31,18 @@ import { UserService } from "./user.service";
 @Controller("user")
 export class UserController {
   constructor(private readonly userService: UserService) {}
+  @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @Post()
   @ApiOperation({ summary: "Create a new user" })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: "User created successfully." })
-  create(@Body() createUserDto: CreateUserDto) {
+  async create(@Body() createUserDto: CreateUserDto) {
     return this.userService.create(createUserDto);
   }
 
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard)
+  // @ApiBearerAuth()
+  // @UseGuards(JwtAuthGuard)
   @Get()
   @ApiOperation({ summary: "Get all users (with query)" })
   @ApiResponse({ status: 200, description: "List of users." })
