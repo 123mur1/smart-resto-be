@@ -91,7 +91,7 @@ export class InfrastructureService {
         data: {
           code: otpCode,
           expires_at: expiresAt,
-          user_id: user.user_id,
+          user_id: user.id,
         },
       });
 
@@ -124,7 +124,7 @@ export class InfrastructureService {
 
       // Store OTP in the database
       await this.prisma.otp.update({
-        where: { user_id: user.user_id },
+        where: { user_id: user.id },
         data: {
           code: otpCode,
           expires_at: expiresAt,

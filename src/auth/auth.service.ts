@@ -38,7 +38,7 @@ export class AuthService {
 
     const token = await this.jwtService.signAsync({
       email: user.email,
-      sub: user.user_id,
+      sub: user.id,
       role: user.role,
     });
 
@@ -52,7 +52,7 @@ export class AuthService {
       message: "User created successfully",
       token,
       user: {
-        id: user.user_id,
+        id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
@@ -86,7 +86,7 @@ export class AuthService {
     }
 
     const payload = {
-      sub: user.user_id,
+      sub: user.id,
       email: user.email,
       role: user.role,
     };
@@ -97,7 +97,7 @@ export class AuthService {
       message: "Login successful",
       accessToken,
       user: {
-        id: user.user_id,
+        id: user.id,
         first_name: user.first_name,
         last_name: user.last_name,
         email: user.email,
@@ -124,7 +124,7 @@ export class AuthService {
 
     const otpRecord = await this.prisma.otp.findFirst({
       where: {
-        user_id: user.user_id,
+        user_id: user.id,
         code: verifyEmailDto.otp,
         expires_at: {
           gt: new Date(),
@@ -145,7 +145,7 @@ export class AuthService {
     });
 
     await this.prisma.otp.delete({
-      where: { user_id: user.user_id },
+      where: { user_id: user.id },
     });
 
     return {
