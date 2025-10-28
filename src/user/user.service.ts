@@ -13,7 +13,7 @@ export class UserService {
     private readonly prisma: PrismaService,
     private readonly infrastructureService: InfrastructureService
   ) {}
-  async create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto, id?: any) {
     await this.infrastructureService.checkDuplicate("user", [
       { property: "email", value: createUserDto.email },
       { property: "phone", value: createUserDto.phone },
@@ -30,8 +30,7 @@ export class UserService {
       message: "User created successfully",
       user: {
         id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        fullName: user.fullName,
         email: user.email,
         phone: user.phone,
         role: user.role,
@@ -40,7 +39,14 @@ export class UserService {
     };
   }
 
-  async findAll(query?: QueryUserDto) {
+  async findAll(
+    query?: QueryUserDto & {
+      page?: number;
+      limit?: number;
+      sort?: string;
+      order?: string;
+    }
+  ) {
     try {
       const where: Record<string, any> = {};
       if (query?.id) {
@@ -72,32 +78,74 @@ export class UserService {
           equals: query.role,
         };
       }
-      const users = await this.prisma.user.findMany({
-        where: Object.keys(where).length ? where : undefined,
-        select: {
-          id: true,
-          first_name: true,
-          last_name: true,
-          email: true,
-          phone: true,
-          role: true,
-          created_at: true,
-        },
-      });
 
-      if (users.length === 0) {
+      const page = Math.max(Number(query?.page ?? 1), 1);
+      const limit = Math.min(Math.max(Number(query?.limit ?? 10), 1), 100);
+      const skip = (page - 1) * limit;
+
+      // whitelist sortable fields
+      const allowedSortFields = [
+        "created_at",
+        "email",
+        "first_name",
+        "last_name",
+        "role",
+      ];
+      const sortField = allowedSortFields.includes(query?.sort || "")
+        ? query!.sort!
+        : "created_at";
+      const sortOrder =
+        (query?.order || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+
+      const [users, total] = await this.prisma.$transaction([
+        this.prisma.user.findMany({
+          where: Object.keys(where).length ? where : undefined,
+          skip,
+          take: limit,
+          orderBy: { [sortField]: sortOrder },
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            role: true,
+            created_at: true,
+          },
+        }),
+        this.prisma.user.count({
+          where: Object.keys(where).length ? where : undefined,
+        }),
+      ]);
+
+      const meta = this.infrastructureService.generatePaginationMeta?.(
+        total,
+        page,
+        limit,
+        "/user"
+      ) ?? {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit),
+      };
+
+      if (total === 0) {
         return {
           status: false,
           message: "No users found",
           users: [],
+          meta,
         };
       }
+
       return {
         status: true,
         message: "Users fetched successfully",
         users,
+        meta,
       };
     } catch (error) {
+      console.error(error);
       throw new ConflictException("Error fetching users");
     }
   }
@@ -109,8 +157,7 @@ export class UserService {
         where: { id: id },
         select: {
           id: true,
-          first_name: true,
-          last_name: true,
+          fullName: true,
           email: true,
           phone: true,
           role: true,
@@ -141,8 +188,7 @@ export class UserService {
         data: updateUserDto,
         select: {
           id: true,
-          first_name: true,
-          last_name: true,
+          fullName: true,
           email: true,
           phone: true,
           role: true,

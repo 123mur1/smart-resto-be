@@ -3,18 +3,11 @@ import { IsEmail, IsString } from "class-validator";
 
 export class RegisterAuthDto {
   @ApiProperty({
-    example: "John",
+    example: "Merci RUYANGA",
     description: "First name of the user",
   })
   @IsString()
-  first_name!: string;
-
-  @ApiProperty({
-    example: "Doe",
-    description: "Last name of the user",
-  })
-  @IsString()
-  last_name!: string;
+  fullName!: string;
 
   @ApiProperty({
     example: "ruyangam15@gmail.com",
