@@ -10,10 +10,7 @@ export class MailService {
   private readonly logger = new Logger(MailService.name);
 
   private transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // STARTTLS
-    requireTLS: true,
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -22,6 +19,7 @@ export class MailService {
     logger: true,
     connectionTimeout: 120000,
     socketTimeout: 120000,
+    tls: { rejectUnauthorized: false },
   } as nodemailer.TransportOptions);
 
   constructor() {
