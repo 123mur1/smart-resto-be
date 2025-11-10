@@ -7,14 +7,21 @@ import { AppModule } from "./app.module";
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // ✅ Swagger configuration
+  // ✅ Enable CORS for all origins
+  app.enableCors({
+    origin: "*", // allow requests from any URL
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+    credentials: true, // optional: needed if using cookies or Authorization headers
+  });
+
+  // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle("My API")
     .setDescription(
       "API documentation for the Smart Campus Restaurant Management System — a digital system for managing meal access, users, and staff."
     )
     .setVersion("0.1")
-    .addBearerAuth() // enables JWT auth support in Swagger UI
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
@@ -22,12 +29,12 @@ async function bootstrap() {
     swaggerOptions: { persistAuthorization: true },
   });
 
-  // ✅ Enable validation globally
+  // Global validation
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true, // Strip properties not in DTOs
-      forbidNonWhitelisted: true, // Throw error for unexpected properties
-      transform: true, // Automatically transform payloads to DTO instances
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
     })
   );
 
