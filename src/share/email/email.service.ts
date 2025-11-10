@@ -11,6 +11,8 @@ export class MailService {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    debug: true,
+    logger: true,
   });
 
   async sendMail(to: string, subject: string, html: string) {

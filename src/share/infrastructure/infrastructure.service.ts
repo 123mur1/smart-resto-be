@@ -71,39 +71,34 @@ export class InfrastructureService {
     };
   }
   async sendOtp(email: string, message?: string) {
-    try {
-      // Generate a 6-digit OTP code
-      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Generate a 6-digit OTP code
+    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      const user = await this.prisma.user.findUnique({
-        where: { email },
-      });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
 
-      if (!user) {
-        throw new NotFoundException("User not found");
-      }
-
-      // Set expiration time (e.g., 10 minutes from now)
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
-
-      // Store OTP in the database
-      await this.prisma.otp.create({
-        data: {
-          code: otpCode,
-          expires_at: expiresAt,
-          user_id: user.id,
-        },
-      });
-
-      // Send OTP via email
-      const subject = "Your OTP Code";
-      const html = otpTemplate(otpCode, message);
-
-      await this.emailService.sendMail(email, subject, html);
-    } catch (error) {
-      console.log(error);
-      throw new InternalServerErrorException("Error sending OTP email");
+    if (!user) {
+      throw new NotFoundException("User not found");
     }
+
+    // Set expiration time (e.g., 10 minutes from now)
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    // Store OTP in the database
+    await this.prisma.otp.create({
+      data: {
+        code: otpCode,
+        expires_at: expiresAt,
+        user_id: user.id,
+      },
+    });
+
+    // Send OTP via email
+    const subject = "Your OTP Code";
+    const html = otpTemplate(otpCode, message);
+
+    await this.emailService.sendMail(email, subject, html);
   }
 
   async resendOtp(email: string, message?: string) {
@@ -118,7 +113,7 @@ export class InfrastructureService {
       throw new NotFoundException("User not found");
     }
 
-    // Set expiration time (e.g., 10 minutes from now)
+    // Set expiration time (e.g., 30 minutes from now)
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     // Store OTP in the database
