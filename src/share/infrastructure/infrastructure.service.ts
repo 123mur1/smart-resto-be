@@ -82,10 +82,10 @@ export class InfrastructureService {
       throw new NotFoundException("User not found");
     }
 
-    // Set expiration time (e.g., 10 minutes from now)
+    // Set expiration time (e.g., 30 minutes from now)
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-    // Store OTP in the database
+    // Store OTP in the database first (so user can verify even if email fails)
     await this.prisma.otp.create({
       data: {
         code: otpCode,
@@ -94,11 +94,21 @@ export class InfrastructureService {
       },
     });
 
-    // Send OTP via email
+    // Try to send OTP via email (non-blocking - don't fail if email fails)
     const subject = "Your OTP Code";
     const html = otpTemplate(otpCode, message);
 
-    await this.emailService.sendMail(email, subject, html);
+    try {
+      await this.emailService.sendMail(email, subject, html);
+    } catch (error) {
+      // Log error - OTP is already saved in DB, so user can still verify
+      console.error(`Failed to send OTP email to ${email}:`, error);
+      // Don't throw - let the caller decide how to handle email failures
+      // The OTP is saved, so registration/verification can still proceed
+      throw new InternalServerErrorException(
+        `OTP generated successfully, but email sending failed. Please check SMTP configuration (EMAIL_USER/EMAIL_PASS or SMTP_USER/SMTP_PASS).`
+      );
+    }
   }
 
   async resendOtp(email: string, message?: string) {
@@ -116,7 +126,7 @@ export class InfrastructureService {
     // Set expiration time (e.g., 30 minutes from now)
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
-    // Store OTP in the database
+    // Store OTP in the database first
     await this.prisma.otp.update({
       where: { user_id: user.id },
       data: {
@@ -125,10 +135,18 @@ export class InfrastructureService {
       },
     });
 
-    // Send OTP via email
+    // Try to send OTP via email (non-blocking)
     const subject = "Your OTP Code";
     const html = otpTemplate(otpCode, message);
 
-    await this.emailService.sendMail(email, subject, html);
+    try {
+      await this.emailService.sendMail(email, subject, html);
+    } catch (error) {
+      // Log error but don't throw - OTP is already saved in DB
+      console.error(`Failed to resend OTP email to ${email}:`, error);
+      throw new InternalServerErrorException(
+        "OTP regenerated but failed to send email. Please check your email configuration or contact support."
+      );
+    }
   }
 }

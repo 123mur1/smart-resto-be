@@ -10,6 +10,20 @@ export class RegisterAuthDto {
   fullName!: string;
 
   @ApiProperty({
+    example: "ST-23001",
+    description: "Student registration number",
+  })
+  @IsString()
+  registrationNo!: string;
+
+  @ApiProperty({
+    example: "Computer Science",
+    description: "Faculty or department",
+  })
+  @IsString()
+  faculty!: string;
+
+  @ApiProperty({
     example: "ruyangam15@gmail.com",
     description: "Email address of the user",
   })

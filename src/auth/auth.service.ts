@@ -27,25 +27,52 @@ export class AuthService {
       { property: "phone", value: registerAuthDto.phone },
       { property: "email", value: registerAuthDto.email },
     ]);
+    await this.InfrastructureService.checkDuplicate("student", [
+      { property: "registration_no", value: registerAuthDto.registrationNo },
+    ]);
 
     const hashedPassword = await bcrypt.hash(registerAuthDto.password, 10);
     const user = await this.prisma.user.create({
       data: {
-        ...registerAuthDto,
+        fullName: registerAuthDto.fullName,
+        email: registerAuthDto.email,
+        phone: registerAuthDto.phone,
         password: hashedPassword,
       },
     });
 
-    await this.InfrastructureService.sendOtp(
-      user.email,
-      "Use this OTP to verify your email."
-    );
+    await this.prisma.student.create({
+      data: {
+        user_id: user.id,
+        registration_no: registerAuthDto.registrationNo,
+        faculty: registerAuthDto.faculty,
+        meal_status: "ACTIVE",
+        balance: 0,
+      },
+    });
 
-    return {
-      status: true,
-      message:
-        "Verification OTP sent to your email, please verify your email account",
-    };
+    // Try to send OTP email, but don't fail registration if email fails
+    try {
+      await this.InfrastructureService.sendOtp(
+        user.email,
+        "Use this OTP to verify your email."
+      );
+      return {
+        status: true,
+        message:
+          "Verification OTP sent to your email, please verify your email account",
+      };
+    } catch (error) {
+      // If email fails, still return success but with a warning message
+      // OTP is already saved in DB, so user can still verify
+      console.error("Registration succeeded but email sending failed:", error);
+      return {
+        status: true,
+        message:
+          "Account created successfully, but failed to send verification email. Please contact support or try resending OTP.",
+        warning: "Email service may not be configured. OTP has been generated and saved.",
+      };
+    }
   }
 
   async login(loginAuthDto: LoginAuthDto) {

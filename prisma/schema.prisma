@@ -57,6 +57,7 @@ model Student {
   // Relations
   user           User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
   mealAccessLogs MealAccessLog[]
+  bookings       MealBooking[]
   payments       Payment[]
   transactions   Transaction[]
 }
@@ -86,28 +87,35 @@ model MealAccessLog {
   id          String       @id @default(uuid())
   student_id  String
   meal_id     String
+  booking_id  String?
   access_time DateTime     @default(now())
   status      AccessStatus @default(VALID)
 
   // Relations
-  student Student @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  meal    Meal    @relation(fields: [meal_id], references: [id], onDelete: Cascade)
+  student Student      @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  meal    Meal         @relation(fields: [meal_id], references: [id], onDelete: Cascade)
+  booking MealBooking? @relation(fields: [booking_id], references: [id], onDelete: Cascade)
 }
 
 // ---------------------------------------------
 // PAYMENTS
 // ---------------------------------------------
 model Payment {
-  id           String        @id @default(uuid())
-  student_id   String
-  amount       Decimal       @db.Decimal(10, 2)
-  method       PaymentMethod
-  payment_date DateTime      @default(now())
-  status       PaymentStatus @default(PENDING)
-  updated_at   DateTime      @updatedAt
+  id            String        @id @default(uuid())
+  student_id    String
+  booking_id    String?       @unique
+  amount        Decimal       @db.Decimal(10, 2)
+  method        PaymentMethod
+  provider_ref  String?       @unique
+  qr_code       String?       @unique
+  qr_expires_at DateTime?
+  payment_date  DateTime      @default(now())
+  status        PaymentStatus @default(PENDING)
+  updated_at    DateTime      @updatedAt
 
   // Relations
   student      Student       @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  booking      MealBooking?  @relation("BookingPayment", fields: [booking_id], references: [id], onDelete: Cascade)
   transactions Transaction[]
 }
 
@@ -115,20 +123,55 @@ model Payment {
 // TRANSACTIONS
 // ---------------------------------------------
 model Transaction {
-  id               String   @id @default(uuid())
+  id               String          @id @default(uuid())
   student_id       String
   meal_id          String?
   payment_id       String?
-  //transaction_type TransactionType
-  amount           Decimal  @db.Decimal(10, 2)
-  balance_after    Decimal? @db.Decimal(10, 2)
-  transaction_date DateTime @default(now())
+  booking_id       String?
+  transaction_type TransactionType @default(CREDIT)
+  amount           Decimal         @db.Decimal(10, 2)
+  balance_after    Decimal?        @db.Decimal(10, 2)
+  transaction_date DateTime        @default(now())
   remarks          String?
 
   // Relations
-  student Student  @relation(fields: [student_id], references: [id], onDelete: Cascade)
-  meal    Meal?    @relation(fields: [meal_id], references: [id], onDelete: Cascade)
-  payment Payment? @relation(fields: [payment_id], references: [id], onDelete: Cascade)
+  student Student      @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  meal    Meal?        @relation(fields: [meal_id], references: [id], onDelete: Cascade)
+  payment Payment?     @relation(fields: [payment_id], references: [id], onDelete: Cascade)
+  booking MealBooking? @relation("BookingTransaction", fields: [booking_id], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------
+// MEAL BOOKINGS
+// ---------------------------------------------
+model MealBooking {
+  id            String        @id @default(uuid())
+  student_id    String
+  meal_type     MealType
+  price         Decimal       @db.Decimal(10, 2)
+  status        BookingStatus @default(PENDING_PAYMENT)
+  scheduled_for DateTime?
+  qr_code       String?       @unique
+  qr_expires_at DateTime?
+  created_at    DateTime      @default(now())
+  updated_at    DateTime      @updatedAt
+
+  // Relations
+  student      Student         @relation(fields: [student_id], references: [id], onDelete: Cascade)
+  payment      Payment?        @relation("BookingPayment")
+  transactions Transaction[]   @relation("BookingTransaction")
+  mealAccesses MealAccessLog[]
+}
+
+// ---------------------------------------------
+// RESTAURANT METRICS
+// ---------------------------------------------
+model RestaurantMetric {
+  id           String   @id @default("main")
+  totalRevenue Decimal  @default(0.00) @db.Decimal(14, 2)
+  totalTopUps  Decimal  @default(0.00) @db.Decimal(14, 2)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
 }
 
 // ---------------------------------------------
@@ -173,11 +216,18 @@ enum PaymentMethod {
 
 enum PaymentStatus {
   PENDING
-  COMPLITED
+  COMPLETED
   FAILED
 }
 
-// enum TransactionType {
-//   DEBT
-//   CREDIT
-// }
+enum TransactionType {
+  DEBIT
+  CREDIT
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  PAID
+  CONSUMED
+  CANCELLED
+}
